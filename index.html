@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MPSTME Rooms — find an empty classroom</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Zilla+Slab:wght@400;500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1C2541;
+    --ink-soft:#3B4468;
+    --paper:#F6F4EF;
+    --paper-raised:#FFFFFF;
+    --line:#DEDACD;
+    --brass:#B8863B;
+    --brass-dark:#8E6526;
+    --free:#3F7154;
+    --free-bg:#E4EEE6;
+    --busy:#A8432E;
+    --busy-bg:#F4E4DF;
+    --nodata-line:#C9C4B2;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    line-height:1.5;
+  }
+  h1,h2,h3,.display{
+    font-family:'Zilla Slab',serif;
+    font-weight:600;
+    margin:0;
+  }
+  .mono{ font-family:'IBM Plex Mono',monospace; }
+
+  /* ---------- Header ---------- */
+  header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:20px 32px;
+    border-bottom:1px solid var(--line);
+    background:var(--paper-raised);
+  }
+  .brand{ display:flex; align-items:baseline; gap:10px; }
+  .brand .mark{
+    width:34px; height:34px; border-radius:6px;
+    background:var(--ink); color:var(--paper);
+    display:flex; align-items:center; justify-content:center;
+    font-family:'IBM Plex Mono',monospace; font-weight:600; font-size:14px;
+  }
+  .brand h1{ font-size:20px; }
+  .brand .sub{ color:var(--ink-soft); font-size:13px; }
+  .clock{ font-family:'IBM Plex Mono',monospace; font-size:13px; color:var(--ink-soft); }
+
+  nav.tabs{
+    display:flex; gap:4px; padding:14px 32px 0;
+  }
+  nav.tabs button{
+    font-family:'Inter',sans-serif;
+    font-size:13px; font-weight:500;
+    padding:8px 16px;
+    background:none; border:none; border-bottom:2px solid transparent;
+    color:var(--ink-soft); cursor:pointer;
+  }
+  nav.tabs button.active{ color:var(--ink); border-bottom-color:var(--brass); }
+
+  main{ padding:28px 32px 60px; max-width:1080px; margin:0 auto; }
+  .view{ display:none; }
+  .view.active{ display:block; }
+
+  /* ---------- Home ---------- */
+  .home-head{
+    display:flex; justify-content:space-between; align-items:flex-end;
+    margin-bottom:20px; flex-wrap:wrap; gap:12px;
+  }
+  .home-head h2{ font-size:26px; }
+  .home-head p{ color:var(--ink-soft); font-size:14px; margin-top:4px; }
+  .stat-pill{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:13px;
+    background:var(--free-bg); color:var(--free);
+    padding:6px 12px; border-radius:20px;
+  }
+
+  .floor-rail{
+    display:flex; gap:6px; margin-bottom:24px; flex-wrap:wrap;
+  }
+  .floor-rail button{
+    width:42px; height:42px;
+    font-family:'IBM Plex Mono',monospace; font-size:13px; font-weight:600;
+    border:1px solid var(--line); background:var(--paper-raised);
+    border-radius:8px; cursor:pointer; color:var(--ink-soft);
+  }
+  .floor-rail button.active{
+    background:var(--ink); color:var(--paper); border-color:var(--ink);
+  }
+
+  .room-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(150px,1fr));
+    gap:12px;
+  }
+  .room-card{
+    background:var(--paper-raised);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:14px;
+    cursor:pointer;
+    text-align:left;
+  }
+  .room-card .code{ font-family:'IBM Plex Mono',monospace; font-weight:600; font-size:15px; }
+  .room-card .status{ font-size:12px; margin-top:6px; }
+  .room-card.free{ background:var(--free-bg); }
+  .room-card.free .status{ color:var(--free); }
+  .room-card.busy{ background:var(--busy-bg); }
+  .room-card.busy .status{ color:var(--busy); }
+  .room-card.nodata{
+    background:var(--paper-raised);
+    border:1px dashed var(--nodata-line);
+  }
+  .room-card.nodata .status{ color:var(--ink-soft); }
+
+  .excluded-note{
+    margin-top:16px; font-size:12px; color:var(--ink-soft);
+  }
+
+  /* ---------- Room detail (weekly) ---------- */
+  .back-link{
+    background:none; border:none; color:var(--ink-soft);
+    font-size:13px; cursor:pointer; padding:0; margin-bottom:16px;
+    display:flex; align-items:center; gap:6px;
+  }
+  .detail-head{ display:flex; align-items:baseline; gap:12px; margin-bottom:4px; }
+  .detail-head .code{ font-family:'IBM Plex Mono',monospace; font-size:28px; font-weight:600; }
+  .detail-head .type{ color:var(--ink-soft); font-size:14px; }
+  .detail-sub{ color:var(--ink-soft); font-size:13px; margin-bottom:20px; }
+
+  .week-table{ overflow-x:auto; border:1px solid var(--line); border-radius:var(--radius); }
+  table{ border-collapse:collapse; width:100%; min-width:760px; }
+  table th, table td{
+    padding:9px 8px; text-align:center; font-size:12px;
+    border-bottom:1px solid var(--line);
+  }
+  table th{
+    font-family:'IBM Plex Mono',monospace; font-weight:600;
+    color:var(--ink-soft); background:var(--paper-raised);
+  }
+  table th:first-child, table td:first-child{
+    text-align:left; position:sticky; left:0; background:var(--paper-raised);
+    border-right:1px solid var(--line); font-weight:600;
+  }
+  td.free{ background:var(--free-bg); color:var(--free); font-weight:500; }
+  td.busy{ background:var(--busy-bg); color:var(--busy); font-weight:500; }
+  td.nodata{ color:var(--nodata-line); }
+
+  .legend{ display:flex; gap:16px; margin:14px 0; font-size:12px; color:var(--ink-soft); }
+  .legend span{ display:inline-flex; align-items:center; gap:5px; }
+  .swatch{ width:10px; height:10px; border-radius:3px; display:inline-block; }
+
+  /* ---------- Upload flow ---------- */
+  .card{
+    background:var(--paper-raised); border:1px solid var(--line);
+    border-radius:12px; padding:24px; max-width:480px;
+  }
+  .card h3{ font-size:17px; margin-bottom:4px; }
+  .card .hint{ color:var(--ink-soft); font-size:13px; margin-bottom:18px; }
+
+  .option-btn{
+    width:100%; text-align:left; display:flex; gap:12px; align-items:center;
+    padding:16px; border:1px solid var(--line); border-radius:var(--radius);
+    background:var(--paper-raised); cursor:pointer; margin-bottom:10px;
+  }
+  .option-btn:hover{ border-color:var(--brass); }
+  .option-btn .icon{
+    width:36px; height:36px; border-radius:8px; background:var(--paper);
+    display:flex; align-items:center; justify-content:center; font-size:16px;
+  }
+  .option-btn .label{ font-weight:600; font-size:14px; }
+  .option-btn .desc{ font-size:12px; color:var(--ink-soft); margin-top:2px; }
+
+  label{ font-size:12px; color:var(--ink-soft); display:block; margin-bottom:4px; }
+  select,input[type=text]{
+    width:100%; padding:9px 10px; border:1px solid var(--line);
+    border-radius:8px; font-family:'Inter',sans-serif; font-size:14px;
+    background:var(--paper-raised); color:var(--ink); margin-bottom:14px;
+  }
+  select.warn{ border-color:var(--busy); }
+  .field-row{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .error-msg{
+    font-size:12px; color:var(--busy); margin:-10px 0 14px; display:none;
+  }
+  button.primary, button.secondary{
+    font-family:'Inter',sans-serif; font-size:14px; font-weight:500;
+    padding:10px 18px; border-radius:8px; cursor:pointer;
+  }
+  button.primary{ background:var(--ink); color:var(--paper); border:none; }
+  button.secondary{ background:none; border:1px solid var(--line); color:var(--ink); }
+  .btn-row{ display:flex; gap:8px; margin-top:6px; }
+  .btn-row button{ flex:1; }
+
+  .success-icon{
+    width:44px; height:44px; border-radius:50%; background:var(--free-bg);
+    color:var(--free); display:flex; align-items:center; justify-content:center;
+    font-size:20px; margin-bottom:14px;
+  }
+
+  /* ---------- Weekly schedule input ---------- */
+  #schedule-table input{
+    width:70px; padding:6px 5px; text-align:center;
+    border:1px solid var(--line); border-radius:6px;
+    font-family:'IBM Plex Mono',monospace; font-size:11px;
+    background:var(--paper-raised); color:var(--ink);
+  }
+  #schedule-table input.excluded-type{
+    border-color:var(--busy); background:var(--busy-bg); color:var(--busy);
+  }
+  #schedule-table input.unknown-code{
+    border-color:var(--brass); background:#FBF1DD; color:var(--brass-dark);
+  }
+  #schedule-table input::placeholder{ color:var(--nodata-line); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="mark">MR</div>
+    <div>
+      <h1>MPSTME Rooms <span style="font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:600; color:var(--brass); border:1px solid var(--brass); border-radius:4px; padding:1px 6px; margin-left:4px; vertical-align:middle;">V1</span></h1>
+      <div class="sub">Find an empty classroom, right now</div>
+    </div>
+  </div>
+  <div class="clock" id="clock"></div>
+</header>
+
+<nav class="tabs">
+  <button class="tab-btn active" data-view="home">Rooms</button>
+  <button class="tab-btn" data-view="upload">Upload timetable</button>
+</nav>
+
+<main>
+
+  <!-- HOME -->
+  <section class="view active" id="view-home">
+    <div class="home-head">
+      <div>
+        <h2>Room status</h2>
+        <p>Free or occupied, by the hour. Labs and unfixed break periods aren't tracked.</p>
+      </div>
+      <div class="stat-pill" id="free-count">— free right now</div>
+    </div>
+
+    <div class="floor-rail" id="floor-rail"></div>
+
+    <div class="room-grid" id="room-grid"></div>
+    <p class="excluded-note" id="excluded-note"></p>
+  </section>
+
+  <!-- ROOM DETAIL -->
+  <section class="view" id="view-room">
+    <button class="back-link" id="back-to-home">&larr; back to rooms</button>
+    <div class="detail-head">
+      <span class="code" id="detail-code"></span>
+      <span class="type" id="detail-type"></span>
+    </div>
+    <p class="detail-sub">Weekly schedule, Monday to Saturday, 8 am to 6 pm</p>
+
+    <div class="legend">
+      <span><span class="swatch" style="background:var(--free)"></span>Free</span>
+      <span><span class="swatch" style="background:var(--busy)"></span>Occupied</span>
+      <span><span class="swatch" style="border:1px dashed var(--nodata-line)"></span>No data</span>
+    </div>
+
+    <div class="week-table">
+      <table id="week-table"></table>
+    </div>
+  </section>
+
+  <!-- UPLOAD: ENTRY -->
+  <section class="view" id="view-upload">
+    <h2 style="margin-bottom:18px;">Add your timetable</h2>
+    <div class="card">
+      <h3>Choose how you want to add it</h3>
+      <p class="hint">Either way, you'll confirm everything before it's submitted.</p>
+      <button class="option-btn" id="opt-photo">
+        <span class="icon">&#128247;</span>
+        <span><span class="label">Upload a file</span><br><span class="desc">Photo, scan, or PDF — we'll read the fields for you</span></span>
+      </button>
+      <button class="option-btn" id="opt-manual">
+        <span class="icon">&#9998;</span>
+        <span><span class="label">Enter manually</span><br><span class="desc">Type in each slot yourself</span></span>
+      </button>
+    </div>
+  </section>
+
+  <!-- UPLOAD: FILE PICKER -->
+  <section class="view" id="view-file">
+    <h2 style="margin-bottom:18px;">Upload a file</h2>
+    <div class="card">
+      <p class="hint">Accepted: JPG, PNG, HEIC, or PDF. Make sure room codes and time slots are readable.</p>
+
+      <p style="font-size:12px; color:var(--busy); background:var(--busy-bg); border-radius:8px; padding:10px 12px; margin-bottom:14px;">
+        Branch, division, semester, and batch must all be clearly printed or visible on the timetable — either in the header or the sheet itself. If any of these can't be read with confidence, that field will be left blank for you to fill in rather than guessed, and if too much is unreadable the upload may be rejected. Nothing goes into the database unless it was actually visible.
+      </p>
+
+      <label for="f-file-input" id="dropzone" style="display:block; border:1px dashed var(--nodata-line); border-radius:var(--radius); padding:28px 16px; text-align:center; cursor:pointer; margin-bottom:14px;">
+        <div id="dropzone-icon" style="font-size:22px;">&#128196;</div>
+        <div id="dropzone-text" style="font-size:13px; color:var(--ink-soft); margin-top:8px;">Tap to choose a file, or drag one here</div>
+      </label>
+      <input type="file" id="f-file-input" accept="image/*,.pdf,.heic,.doc,.docx" style="display:none;">
+
+      <div class="btn-row">
+        <button class="secondary" id="file-back">Back</button>
+        <button class="primary" id="file-continue" disabled>Continue</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- UPLOAD: FILE PICK -->
+  <section class="view" id="view-photo">
+    <h2 style="margin-bottom:18px;">Upload a photo or document</h2>
+    <div class="card">
+      <h3>Add your timetable file</h3>
+      <p class="hint">Accepted formats: JPG, PNG, HEIC, or PDF. Make sure room codes and time slots are readable.</p>
+
+      <label for="file-input" id="dropzone" style="display:block; border:1px dashed var(--nodata-line); border-radius:var(--radius); padding:28px 16px; text-align:center; cursor:pointer; margin-bottom:14px;">
+        <div id="dropzone-text" style="font-size:13px; color:var(--ink-soft);">Click to choose a file, or drag one here</div>
+        <div id="dropzone-file" style="font-family:'IBM Plex Mono',monospace; font-size:13px; margin-top:8px; display:none;"></div>
+      </label>
+      <input type="file" id="file-input" accept="image/*,application/pdf,.heic,.heif" style="display:none;">
+      <p class="error-msg" id="file-error">Choose a file before continuing.</p>
+
+      <div class="btn-row">
+        <button class="secondary" id="photo-back">Back</button>
+        <button class="primary" id="photo-continue">Continue</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- UPLOAD: CONFIRM -->
+  <section class="view" id="view-confirm">
+    <h2 style="margin-bottom:18px;">Confirm details</h2>
+    <div class="card">
+      <label>Branch</label>
+      <select id="f-branch">
+        <option value="diploma">Diploma</option>
+        <option value="btech" selected>B.Tech</option>
+        <option value="btech-mba">B.Tech + MBA Tech</option>
+        <option value="mtech">M.Tech</option>
+      </select>
+
+      <label>Specialisation</label>
+      <select id="f-spec"></select>
+
+      <label>Semester</label>
+      <select id="f-sem"></select>
+
+      <div class="field-row">
+        <div>
+          <label>Division</label>
+          <select id="f-division"></select>
+        </div>
+        <div>
+          <label>Batch</label>
+          <select id="f-batch"></select>
+        </div>
+      </div>
+      <p class="error-msg" id="f-error">Division and batch don't match. Check both fields against your timetable.</p>
+
+      <div class="btn-row">
+        <button class="secondary" id="f-back">Back</button>
+        <button class="primary" id="f-submit">Continue to schedule</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- UPLOAD: WEEKLY SCHEDULE -->
+  <section class="view" id="view-schedule">
+    <h2 style="margin-bottom:6px;">Your weekly schedule</h2>
+    <p class="detail-sub">Enter the room for each class you have. Leave a slot blank for no class, lunch, library, or a lab — those aren't tracked.</p>
+
+    <div class="card" style="max-width:900px;">
+      <div class="week-table" style="margin-bottom:16px;">
+        <table id="schedule-table"></table>
+      </div>
+      <p class="hint" id="schedule-hint" style="margin-bottom:14px;"></p>
+      <div class="btn-row">
+        <button class="secondary" id="sched-back">Back</button>
+        <button class="primary" id="sched-submit">Submit</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- UPLOAD: SUCCESS -->
+  <section class="view" id="view-success">
+    <div class="card" style="text-align:center;">
+      <div class="success-icon" style="margin-left:auto;margin-right:auto;">&#10003;</div>
+      <h3>Timetable added</h3>
+      <p class="hint" id="success-sub"></p>
+      <div class="btn-row">
+        <button class="secondary" id="s-another">Upload another</button>
+        <button class="primary" id="s-grid">View room grid</button>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script src="app.js"></script>
+
+</body>
+</html>
