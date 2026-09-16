@@ -1,6 +1,6 @@
 const express = require("express");
 const multer = require("multer");
-const { extractTimetableFields } = require("../lib/gemini");
+const { extractTimetableFields } = require("./gemini");
 
 const router = express.Router();
 
