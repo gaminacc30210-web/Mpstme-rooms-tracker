@@ -68,7 +68,7 @@ honest, low confidence score — do not inflate confidence to seem sure.
 `;
 
 async function extractTimetableFields({ base64Data, mimeType }) {
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  const model = genAI.getGenerativeModel({ model: "gemini-3-flash" });
 
   const result = await model.generateContent([
     { text: EXTRACTION_PROMPT },
