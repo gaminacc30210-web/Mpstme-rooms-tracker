@@ -3,9 +3,9 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 
-const uploadRoute = require("./routes/upload");
-const submitRoute = require("./routes/submit");
-const roomsRoute = require("./routes/rooms");
+const uploadRoute = require("./upload");
+const submitRoute = require("./submit");
+const roomsRoute = require("./rooms");
 
 const app = express();
 
