@@ -1,7 +1,7 @@
 /* ---------------- backend config ---------------- */
 // The browser only ever talks to this local server — never to Gemini
 // or Supabase directly. No API keys live anywhere in this file.
-const API_BASE = "http://localhost:4000";
+const API_BASE = "https://mpstme-rooms-tracker.onrender.com";
 
 /* ---------------- data ---------------- */
 const FLOORS = ["LG","G","1","2","3","4","5","6","7","8"];
